@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud-nextcloud-deployment-cdk8splus-c8f965be
+spec:
+  minReadySeconds: 0
+  progressDeadlineSeconds: 600
+  replicas: 1
+  selector:
+    matchLabels:
+      cdk8s.io/metadata.addr: nextcloud-nextcloud-deployment-cdk8splus-c8c1ced7
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        cdk8s.io/metadata.addr: nextcloud-nextcloud-deployment-cdk8splus-c8c1ced7
+    spec:
+      automountServiceAccountToken: true
+      containers:
+        - image: nextcloud:16-apache
+          imagePullPolicy: Always
+          name: nextcloud-container
+          ports:
+            - containerPort: 80
+          securityContext:
+            privileged: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: false
+          volumeMounts:
+            - mountPath: /var/www/html
+              name: nextcloud-persistent-storage
+      dnsPolicy: ClusterFirst
+      securityContext:
+        fsGroupChangePolicy: Always
+        runAsNonRoot: false
+      setHostnameAsFQDN: false
+      volumes:
+        - name: nextcloud-persistent-storage
+          persistentVolumeClaim:
+            claimName: pvc-shared-pvc-c8fd4c8b
+            readOnly: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud-service
+spec:
+  clusterIP: None
+  externalIPs: []
+  ports:
+    - port: 3306
+  selector:
+    cdk8s.io/metadata.addr: nextcloud-nextcloud-deployment-cdk8splus-c8c1ced7
+  type: ClusterIP
