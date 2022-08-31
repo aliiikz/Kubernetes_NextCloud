@@ -5,5 +5,6 @@ metadata:
 allowVolumeExpansion: true
 parameters:
   fsType: btrfs
-provisioner: local
+provisioner: rancher.io/local-path
 reclaimPolicy: Delete
+volumeBindingMode: WaitForFirstConsumer
