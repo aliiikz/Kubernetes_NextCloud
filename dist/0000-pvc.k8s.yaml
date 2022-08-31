@@ -1,7 +1,9 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pvc-shared-pvc-c8fd4c8b
+  labels:
+    app: nextcloud
+  name: shared-pvc
 spec:
   accessModes:
     - ReadWriteOnce
