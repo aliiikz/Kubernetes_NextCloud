@@ -53,7 +53,7 @@ spec:
       securityContext:
         fsGroupChangePolicy: Always
         runAsNonRoot: false
-      setHostnameAsFQDN: false
+      # setHostnameAsFQDN: false
       volumes:
         - name: mysql-persistent-storage
           persistentVolumeClaim:
