@@ -27,14 +27,21 @@ func NewMySQLChart(scope constructs.Construct, id string, props *MyChartProps) c
 
 	// Creating New Secret
 	secretName := "mysqlpassword"
-	password := "VerySecurePassword123"
+	rootpassword := "VerySecurePassword123"
+	user := "kazemi"
+	password := "SecurePassword123"
+	databasename := "hamravesh"
 
 	mysqlSecret := cdk8splus22.NewSecret(chart, jsii.String("mysql-secret"),
 		&cdk8splus22.SecretProps{
 			Metadata: &cdk8s.ApiObjectMetadata{Name: jsii.String(secretName)}})
 
 	secretKey := "VerySecureSecretKey123"
+
+	mysqlSecret.AddStringData(jsii.String(secretKey), jsii.String(rootpassword))
+	mysqlSecret.AddStringData(jsii.String(secretKey), jsii.String(user))
 	mysqlSecret.AddStringData(jsii.String(secretKey), jsii.String(password))
+	mysqlSecret.AddStringData(jsii.String(secretKey), jsii.String(databasename))
 
 	deploymentName := "nextcloud"
 
@@ -50,11 +57,20 @@ func NewMySQLChart(scope constructs.Construct, id string, props *MyChartProps) c
 	})
 
 	// Using Secret in Env
-	envValFromSecret := cdk8splus22.EnvValue_FromSecretValue(&cdk8splus22.SecretValue{Key: jsii.String(secretKey), Secret: mysqlSecret}, &cdk8splus22.EnvValueFromSecretOptions{Optional: jsii.Bool(true)})
+	envValRootPassFromSecret := cdk8splus22.EnvValue_FromSecretValue(&cdk8splus22.SecretValue{Key: jsii.String(secretKey), Secret: mysqlSecret}, &cdk8splus22.EnvValueFromSecretOptions{Optional: jsii.Bool(true)})
+	envValUserFromSecret := cdk8splus22.EnvValue_FromSecretValue(&cdk8splus22.SecretValue{Key: jsii.String(secretKey), Secret: mysqlSecret}, &cdk8splus22.EnvValueFromSecretOptions{Optional: jsii.Bool(true)})
+	envValPassFromSecret := cdk8splus22.EnvValue_FromSecretValue(&cdk8splus22.SecretValue{Key: jsii.String(secretKey), Secret: mysqlSecret}, &cdk8splus22.EnvValueFromSecretOptions{Optional: jsii.Bool(true)})
+	envValDBFromSecret := cdk8splus22.EnvValue_FromSecretValue(&cdk8splus22.SecretValue{Key: jsii.String(secretKey), Secret: mysqlSecret}, &cdk8splus22.EnvValueFromSecretOptions{Optional: jsii.Bool(true)})
 
-	mySQLPasswordEnvName := "MYSQL_ROOT_PASSWORD"
+	mySQLUserEnvName := "MYSQL_USER"
+	mySQLPasswordEnvName := "MYSQL_PASSWORD"
+	mySQLRootPasswordEnvName := "MYSQL_ROOT_PASSWORD"
+	mySQLDBEnvName := "MYSQL_DATABASE"
 
-	mysqlContainer.Env().AddVariable(jsii.String(mySQLPasswordEnvName), envValFromSecret)
+	mysqlContainer.Env().AddVariable(jsii.String(mySQLRootPasswordEnvName), envValRootPassFromSecret)
+	mysqlContainer.Env().AddVariable(jsii.String(mySQLUserEnvName), envValUserFromSecret)
+	mysqlContainer.Env().AddVariable(jsii.String(mySQLPasswordEnvName), envValPassFromSecret)
+	mysqlContainer.Env().AddVariable(jsii.String(mySQLDBEnvName), envValDBFromSecret)
 
 	// Using Shared PVC
 	mysqlVolumeName := "mysql-persistent-storage"
@@ -123,6 +139,28 @@ func NewNextCloudChart(scope constructs.Construct, id string, props *MyChartProp
 	return chart
 }
 
+// LoadBalancer Chart
+func NewLoadBalancerChart(scope constructs.Construct, id string, props *MyChartProps) cdk8s.Chart {
+	var cprops cdk8s.ChartProps
+	if props != nil {
+		cprops = props.ChartProps
+	}
+	chart := cdk8s.NewChart(scope, jsii.String(id), &cprops)
+
+	loadbalancerServiceName := "nextcloud-service"
+	appName := "nextcloud"
+
+	cdk8splus22.NewService(chart, jsii.String("nextcloud-service"), &cdk8splus22.ServiceProps{
+		Metadata: &cdk8s.ApiObjectMetadata{Name: jsii.String(loadbalancerServiceName), Labels: &map[string]*string{"app": &appName}},
+		// Selector: NewNextCloudChart(),
+		Type: cdk8splus22.ServiceType_LOAD_BALANCER,
+		// ClusterIP: jsii.String(clusterIPNone),
+		Ports: &[]*cdk8splus22.ServicePort{{Port: jsii.Number(80)}},
+	})
+
+	return chart
+}
+
 // PVC Chart
 func NewPVCChart(scope constructs.Construct, id string, props *MyChartProps) cdk8s.Chart {
 	var cprops cdk8s.ChartProps
@@ -170,32 +208,33 @@ func NewNginxChart(scope constructs.Construct, id string, props *NginxChartProps
 	return chart
 }
 
-// Ingress Chart
-func NewIngressChart(scope constructs.Construct, id string, props *MyChartProps) cdk8s.Chart {
-	var cprops cdk8s.ChartProps
-	if props != nil {
-		cprops = props.ChartProps
-	}
-	chart := cdk8s.NewChart(scope, jsii.String(id), &cprops)
+// // Ingress Chart
+// func NewIngressChart(scope constructs.Construct, id string, props *MyChartProps) cdk8s.Chart {
+// 	var cprops cdk8s.ChartProps
+// 	if props != nil {
+// 		cprops = props.ChartProps
+// 	}
+// 	chart := cdk8s.NewChart(scope, jsii.String(id), &cprops)
 
-	ingressName := "cluster-ingress"
-	host := "nextcloud.site.test"
-	// NextCloud Deployment
-	nginxingress := cdk8splus22.NewIngress(chart, jsii.String("nextcloud-deployment"), &cdk8splus22.IngressProps{Metadata: &cdk8s.ApiObjectMetadata{Labels: &map[string]*string{"app": &ingressName}}})
-	nginxingress.AddRules(&cdk8splus22.IngressRule{Host: &host})
-	nginxingress.AddDefaultBackend(cdk8splus22.IngressBackend_FromService)
-	return chart
-}
+// 	ingressName := "cluster-ingress"
+// 	host := "nextcloud.site.test"
+// 	// NextCloud Deployment
+// 	nginxingress := cdk8splus22.NewIngress(chart, jsii.String("nextcloud-deployment"), &cdk8splus22.IngressProps{Metadata: &cdk8s.ApiObjectMetadata{Labels: &map[string]*string{"app": &ingressName}}})
+// 	nginxingress.AddRules(&cdk8splus22.IngressRule{Host: &host})
+// 	nginxingress.AddDefaultBackend(cdk8splus22.IngressBackend_FromService)
+// 	return chart
+// }
 
 func main() {
 	app := cdk8s.NewApp(nil)
 
-	ingressChart := NewIngressChart(app, "ingress", nil)
+	// ingressChart := NewIngressChart(app, "ingress", nil)
+	loadbalancerChart := NewLoadBalancerChart(app, "loadbalancer", nil)
 	sharedPVCChart := NewPVCChart(app, "pvc", nil)
 	mysqlChart := NewMySQLChart(app, "mysql", nil)
 	nextcloudChart := NewNextCloudChart(app, "nextcloud", nil)
 	nginxChart := NewNginxChart(app, "nginx", nil)
-	mysqlChart.AddDependency(sharedPVCChart, nginxChart, ingressChart)
-	nextcloudChart.AddDependency(sharedPVCChart, mysqlChart, nginxChart, ingressChart)
+	mysqlChart.AddDependency(sharedPVCChart, nginxChart)
+	nextcloudChart.AddDependency(sharedPVCChart, mysqlChart, nginxChart, loadbalancerChart)
 	app.Synth()
 }

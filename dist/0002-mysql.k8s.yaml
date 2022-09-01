@@ -4,7 +4,7 @@ immutable: false
 metadata:
   name: mysqlpassword
 stringData:
-  VerySecureSecretKey123: VerySecurePassword123
+  VerySecureSecretKey123: hamravesh
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -38,6 +38,24 @@ spec:
                   key: VerySecureSecretKey123
                   name: mysqlpassword
                   optional: true
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  key: VerySecureSecretKey123
+                  name: mysqlpassword
+                  optional: true
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: VerySecureSecretKey123
+                  name: mysqlpassword
+                  optional: true
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  key: VerySecureSecretKey123
+                  name: mysqlpassword
+                  optional: true
           image: mysql
           imagePullPolicy: Always
           name: mysql-container
@@ -53,7 +71,7 @@ spec:
       securityContext:
         fsGroupChangePolicy: Always
         runAsNonRoot: false
-      # setHostnameAsFQDN: false
+      setHostnameAsFQDN: false
       volumes:
         - name: mysql-persistent-storage
           persistentVolumeClaim:
